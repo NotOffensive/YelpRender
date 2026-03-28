@@ -24,19 +24,23 @@ const reviewRoutes = require('./routes/reviews');
 const MongoStore = require('connect-mongo');
 
 const dbUrl = process.env.DB_URL || 'mongodb://localhost:27017/yelp-camp';
+mongoose.set('strictQuery', true);
 
 mongoose.connect(dbUrl, {
-    // useNewUrlParser: true,
-    // useCreateIndex: true,
-    // useUnifiedTopology: true,
-    // useFindAndModify: false
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+})
+.then(() => {
+    console.log("Database connected");
+})
+.catch(err => {
+    console.log("Connection error:");
+    console.log(err);
 });
 
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
-db.once("open", () => {
-    console.log("Database connected");
-});
+
 
 const app = express();
 
@@ -51,7 +55,10 @@ app.use(mongoSanitize({
     replaceWith: '_'
 }))
 
-const secret = process.env.SECRET || 'thishsouldbeabettersecret!';
+const secret =
+    typeof process.env.SECRET === 'string' && process.env.SECRET.length > 0
+        ? process.env.SECRET
+        : 'thisshouldbeabettersecret!';
 
 const store = MongoStore.create({
     mongoUrl: dbUrl,
@@ -70,7 +77,7 @@ const sessionConfig = {
     name: 'whohoo',
     secret,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     cookie: {
         httpOnly: true,
         // secure: true,
@@ -159,10 +166,14 @@ app.all('*', (req, res, next) => {
 })
 
 app.use((err, req, res, next) => {
+    if (res.headersSent) {
+        return next(err);
+    }
+
     const { statusCode = 500 } = err;
-    if (!err.message) err.message = 'Oh No, Something Went Wrong!'
-    res.status(statusCode).render('error', { err })
-})
+    if (!err.message) err.message = 'Oh No, Something Went Wrong!';
+    return res.status(statusCode).render('error', { err });
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

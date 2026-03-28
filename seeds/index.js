@@ -1,57 +1,51 @@
+if (process.env.NODE_ENV !== "production") {
+    require('dotenv').config();
+}
+
 const mongoose = require('mongoose');
-const cities = require('./cities');
-const { places, descriptors } = require('./seedHelpers');
 const Campground = require('../models/campground');
+const cities = require('./cities');
+const { places, descriptors, images } = require('./seedhelpers');
 
-mongoose.connect('mongodb://localhost:27017/yelp-camp', {
-    // useNewUrlParser: true,
-    // useCreateIndex: true,
-    // useUnifiedTopology: true
-});
+const dbUrl = process.env.DB_URL;
 
-const db = mongoose.connection;
-
-db.on("error", console.error.bind(console, "connection error:"));
-db.once("open", () => {
-    console.log("Database connected");
-});
+mongoose.connect(dbUrl)
+    .then(() => {
+        console.log("Database connected");
+    })
+    .catch(err => {
+        console.log("Connection error:");
+        console.log(err);
+    });
 
 const sample = array => array[Math.floor(Math.random() * array.length)];
 
-
 const seedDB = async () => {
     await Campground.deleteMany({});
-    for (let i = 0; i < 300; i++) {
+    console.log("Old campgrounds removed.");
+
+    for (let i = 0; i < 150; i++) {
         const random1000 = Math.floor(Math.random() * 1000);
         const price = Math.floor(Math.random() * 20) + 10;
+
         const camp = new Campground({
-            author: '62cdc34fe6cacc762d84ef58',
-            location: `${cities[random1000].city}, ${cities[random1000].state}`,
+            author: 'KyleNO', 
             title: `${sample(descriptors)} ${sample(places)}`,
-            description: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Quibusdam dolores vero perferendis laudantium, consequuntur voluptatibus nulla architecto, sit soluta esse iure sed labore ipsam a cum nihil atque molestiae deserunt!',
+            location: `${cities[random1000].city}, ${cities[random1000].state}`,
+            description: 'A beautiful campground with nature and adventure.',
             price,
-            geometry: {
-                type: "Point",
-                coordinates: [
-                    cities[random1000].longitude,
-                    cities[random1000].latitude,
-                ]
-            },
             images: [
-                {
-                    url: "https://res.cloudinary.com/dky8ehknd/image/upload/v1657737144/YelpCamp/zksdxlpuodwxbmzmqef0.jpg",
-                    filename: "YelpCamp/zksdxlpuodwxbmzmqef0"
-                },
-                {
-                    url: "https://res.cloudinary.com/dky8ehknd/image/upload/v1657737144/YelpCamp/t6mhdaahpovoq0rpmjpg.jpg",
-                    filename: "YelpCamp/t6mhdaahpovoq0rpmjpg"
-                }
+                sample(images),
+                sample(images),
+                sample(images)
             ]
-        })
+        });
+
         await camp.save();
     }
-}
+};
 
 seedDB().then(() => {
     mongoose.connection.close();
-})
+    console.log("Database seeded and connection closed.");
+});
