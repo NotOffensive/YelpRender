@@ -9,9 +9,16 @@ const { places, descriptors, images } = require('./seedhelpers');
 
 const dbUrl = process.env.DB_URL;
 
+console.log("DB_URL:", dbUrl);
+
 mongoose.connect(dbUrl)
-    .then(() => {
+    .then(async () => {
         console.log("Database connected");
+
+        await seedDB();
+
+        mongoose.connection.close();
+        console.log("Database seeded and connection closed.");
     })
     .catch(err => {
         console.log("Connection error:");
